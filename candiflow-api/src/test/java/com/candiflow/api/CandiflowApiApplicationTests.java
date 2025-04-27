@@ -1,4 +1,4 @@
-package com.candiflow_api;
+package com.candiflow.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
