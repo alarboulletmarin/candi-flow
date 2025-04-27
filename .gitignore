@@ -53,7 +53,8 @@ hs_err_pid*
 .gradle/
 build/
 */build/
-!gradle/wrapper/gradle-wrapper.jar  # Ne pas ignorer le wrapper Gradle
+!gradle/wrapper/gradle-wrapper.jar
+# Ne pas ignorer le wrapper Gradle
 
 # Maven
 target/
@@ -166,3 +167,4 @@ secrets/
 # Fichiers de configuration locale divers
 config.local.js
 local.settings.json
+/candiflow-api/.factorypath
