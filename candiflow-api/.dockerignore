@@ -1,0 +1,12 @@
+.git
+.gitignore
+.idea/
+build/
+.gradle/
+*.log
+*.tmp
+
+# Fichiers spécifiques à l'OS ou à l'IDE non nécessaires au build
+.DS_Store
+*.iml
+*.iws

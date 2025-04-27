@@ -1,0 +1,56 @@
+services:
+  candiflow-db:
+    image: postgres:16-alpine
+    container_name: candiflow-db
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - candiflow-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - candiflow-net
+
+  candiflow-api:
+    # Indique à Docker Compose de construire l'image en utilisant le Dockerfile
+    # situé dans le dossier ./candiflow-api (relatif au docker-compose.yml)
+    build: ./candiflow-api
+    # Nom du conteneur
+    container_name: candiflow-api
+    # Mappe le port 8080 du conteneur au port 8080 de la machine hôte
+    # pour pouvoir accéder à l'API depuis l'extérieur (ex: Postman, Frontend)
+    ports:
+      - "8080:8080"
+    # Variables d'environnement nécessaires à l'API Spring Boot
+    environment:
+      # Réutilise les mêmes variables que pour la DB pour la connexion
+      SPRING_DATASOURCE_URL: jdbc:postgresql://candiflow-db:5432/${POSTGRES_DB} # Utilise le nom du service DB
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Ajoute d'autres variables nécessaires (ex: secret JWT)
+      # JWT_SECRET: ${JWT_SECRET} # Assure-toi d'ajouter JWT_SECRET dans ton .env
+    # Dépend du service de base de données (attend que la DB soit 'healthy' avant de démarrer)
+    depends_on:
+      candiflow-db:
+        condition: service_healthy # Attend le healthcheck de la DB
+    # Politique de redémarrage
+    restart: unless-stopped
+    # Connecte ce service au même réseau que la DB
+    networks:
+      - candiflow-net
+
+# Déclaration des volumes et réseaux (inchangé)
+volumes:
+  candiflow-pgdata:
+
+networks:
+  candiflow-net:
+    driver: bridge
