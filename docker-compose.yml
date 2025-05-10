@@ -1,49 +1,75 @@
 services:
+  # Base de données PostgreSQL
   candiflow-db:
     image: postgres:16-alpine
     container_name: candiflow-db
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-candiflow}
+      POSTGRES_USER: ${POSTGRES_USER:-candiflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-candiflow}
     volumes:
       - candiflow-pgdata:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-candiflow} -d ${POSTGRES_DB:-candiflow}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - candiflow-net
 
+  # Backend Spring Boot
   candiflow-api:
-    # Indique à Docker Compose de construire l'image en utilisant le Dockerfile
-    # situé dans le dossier ./candiflow-api (relatif au docker-compose.yml)
-    build: ./candiflow-api
-    # Nom du conteneur
+    build:
+      context: ./candiflow-api
+      dockerfile: Dockerfile
     container_name: candiflow-api
-    # Mappe le port 8080 du conteneur au port 8080 de la machine hôte
-    # pour pouvoir accéder à l'API depuis l'extérieur (ex: Postman, Frontend)
     ports:
       - "8080:8080"
-    # Variables d'environnement nécessaires à l'API Spring Boot
     environment:
-      # Réutilise les mêmes variables que pour la DB pour la connexion
-      SPRING_DATASOURCE_URL: jdbc:postgresql://candiflow-db:5432/${POSTGRES_DB} # Utilise le nom du service DB
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      # Ajoute d'autres variables nécessaires (ex: secret JWT)
-      # JWT_SECRET: ${JWT_SECRET} # Assure-toi d'ajouter JWT_SECRET dans ton .env
-    # Dépend du service de base de données (attend que la DB soit 'healthy' avant de démarrer)
+      # Configuration de la base de données
+      SPRING_DATASOURCE_URL: jdbc:postgresql://candiflow-db:5432/${POSTGRES_DB:-candiflow}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-candiflow}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-candiflow}
+      # Configuration de l'application
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      # Configuration de sécurité
+      JWT_SECRET: ${JWT_SECRET:-candiflowSecretKey}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      # Configuration CORS pour le frontend
+      ALLOWED_ORIGINS: http://localhost:19006,http://localhost:19000,http://localhost:8081
     depends_on:
       candiflow-db:
-        condition: service_healthy # Attend le healthcheck de la DB
-    # Politique de redémarrage
+        condition: service_healthy
     restart: unless-stopped
-    # Connecte ce service au même réseau que la DB
+    networks:
+      - candiflow-net
+
+  # Frontend React Native avec Expo
+  candiflow-ui:
+    build:
+      context: ./candiflow-ui
+      dockerfile: Dockerfile
+    container_name: candiflow-ui
+    ports:
+      - "19006:19006" # Port web Expo
+      - "19000:19000" # Port Metro bundler
+      - "8081:8081"   # Port React Native
+    environment:
+      # URL de l'API backend
+      EXPO_PUBLIC_API_URL: http://localhost:8080
+      # Autres variables d'environnement pour le frontend
+      NODE_ENV: ${NODE_ENV:-production}
+      # Configuration pour Expo
+      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
+    volumes:
+      - ./candiflow-ui:/app
+      - /app/node_modules
+    depends_on:
+      - candiflow-api
+    restart: unless-stopped
     networks:
       - candiflow-net
 
