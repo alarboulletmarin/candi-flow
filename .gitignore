@@ -168,3 +168,6 @@ secrets/
 config.local.js
 local.settings.json
 /candiflow-api/.factorypath
+TASKS_FRONTEND.md
+TASKS.md
+.env.example
