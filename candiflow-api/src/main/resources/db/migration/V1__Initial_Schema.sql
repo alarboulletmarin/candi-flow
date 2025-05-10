@@ -1,7 +1,7 @@
 -- V1__Initial_Schema.sql
 -- Script initial pour créer le schéma de CandiFlow
 
-CREATE TYPE user_role AS ENUM ('CANDIDATE', 'RECRUITER');
+CREATE TYPE user_role AS ENUM ('ADMIN', 'CANDIDATE', 'RECRUITER');
 CREATE TYPE job_status AS ENUM ('OPEN', 'CLOSED');
 
 CREATE TABLE users
